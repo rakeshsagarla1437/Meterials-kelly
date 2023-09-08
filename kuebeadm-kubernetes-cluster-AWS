@@ -1,12 +1,21 @@
+   sudo su
+   #To Install Prerequisit packages
 apt-get update && apt-get install -y apt-transport-https
-    5  sudo apt update
-    6  sudo apt -y install curl apt-transport-https
-    7  curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
-    8  echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
-    9  apt-get install docker.io -y
-   10  sudo apt update
-   11  apt-get install -y kubelet kubeadm kubectl kubernetes-cni
+sudo apt update
+sudo apt -y install curl apt-transport-https
 
+        #To add K8S repository
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+       
+       #To install Docker
+apt-get install docker.io -y
+sudo apt update
+       
+       #To install tools like kubeadm,kubelet,kudectl and Kubernetes CNI
+apt-get install -y kubelet kubeadm kubectl kubernetes-cni
+
+        #To access K8S you may get an error, to resolve taht error use this CMD's
 cat > /etc/docker/daemon.json <<EOF
 {
   "exec-opts": ["native.cgroupdriver=systemd"],
@@ -25,29 +34,39 @@ mkdir -p /etc/systemd/system/docker.service.d
 
 systemctl daemon-reload
 systemctl restart docker
+
+        #####{from now on steps only in mater}#####
+        #3o the initializing in MASTER only (i.e., To manage the cluster) 
 kubeadm init
-########## to start Kubernetes Cluster use this as Normal user##########
+        ##NOW in last few linew after giving init CMD you will get token something like
+        ##(kubeadm join 172.31.0.64:6443 --token 9vgn3n.dboxbi5uvtksefap         --discovery-token-ca-cert-hash sha256:616cbe83451bc83624566705864867fb5030b87f2977d9bb01f21d56ce002adc
+        ## copy TOKEN and do below CMDs aldo 
+        
+        #To start cluster
 mkdir -p $HOME/.kube
-  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-  sudo chown $(id -u):$(id -g) $HOME/.kube/config
-################################
-if you are loging as root user run below command
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
 
-export KUBECONFIG=/etc/kubernetes/admin.conf
+        #THEN you need to create a network for all 3 MASTER, NODE1,NODE2 to communicate
+        ##on browser copy below url
+        ###https://kubernetes.io/docs/concepts/cluster-administration/addons/##
 
-
-on browser copy below url
-https://kubernetes.io/docs/concepts/cluster-administration/addons/
-
-goto master and run below command
 kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
 
-kubectl get nodes
+kubectl apply -f https://github.com/weaveworks/weave/releases/download/v2.8.1/weave-daemonset-k8s.yaml
+        ##WITH this the network is created and cluster is setup
+        
+        ##Now Run the token cmd in nodes 
+        #WITH this all nodes connects to master and you can check
+kubectl get pods
+        #shows both nodes and status should be active
+        
+        #now create a yml file to create multipile deployments, pods and services by defining all of them in yml file
+vi nginx-deployment.yml
 
-if you see error like this
+        ###NOW deploy the yml file i.e.s create the deployment by giving CMD
+kubectl apply -f nginx-deployment.yml
 
-# kubectl get node
-The connection to the server 172.31.12.142:6443 was refused - did you specify the right host or port?
-
-Again run 
-export KUBECONFIG=/etc/kubernetes/admin.conf
+        # Then check the pods which will be up and running in the nodes by sharing the no of replica sete to both nodes in roundrobin fashion
+kubectl get pods -o wide
+        
